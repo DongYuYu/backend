@@ -1,0 +1,7 @@
+POST http://localhost:3023/persons
+content-type: 
+
+{
+    "name": "i love you",
+    
+}
