@@ -1,55 +1,15 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const parseBody = require('body-parser')
 const baseUri = 'http://localhost:3023/persons'
 const morgan = require('morgan')
-let phones =  [
-    {
-      "number": "2323223",
-      "name": "Love",
-      "id": 7
-    },
-    {
-      "number": "2323223",
-      "name": "You",
-      "id": 8
-    },
-    {
-      "number": "2323223",
-      "name": "Bhagavan",
-      "id": 10
-    },
-    {
-      "number": "2323223",
-      "name": "me",
-      "id": 12
-    },
-    {
-      "number": "2323223",
-      "name": "love",
-      "id": 14
-    },
-    {
-      "number": "2323223",
-      "name": "I",
-      "id": 15
-    },
-    {
-      "number": "2323223",
-      "name": "you",
-      "id": 16
-    },
-    {
-      "number": "2323223",
-      "name": "sky",
-      "id": 17
-    },
-    {
-      "number": "2323223",
-      "name": "Love",
-      "id": 18
-    }
-  ]
+
+
+
+app.use(express.static('build'))
+
+
 app.get('/info', (req, res) => {
 
     res.send(`<p>phone has ${phones.length} entries</p> <p>${new Date()}</p>`)
@@ -59,27 +19,18 @@ res.header('Access-Control-Allow-Origin', '*');
 res.header('Access-Control-Allow-Methods', "GET, POST, DELETE, OPTIONS")
 res.header('Access-control-Allow-Headers', 'Content-Type')
 
-
-
-
-
-
-
-
-
-
 if (req.method === "OPTIONS") {
   return res.status(200).end();
 }
 next();
 });
-
+const Phone = require('./model/persons')
 app.use(parseBody.json())
 
 
 app.use(morgan('combined'))
-app.delete('/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
+app.delete('/persons/:id', (req, res, next) => {
+    // const id = Number(req.params.id)
 
 
 
@@ -88,54 +39,111 @@ app.delete('/persons/:id', (req, res) => {
 
 
 
-    phones = phones.filter((note) => note.id !== id)
-    res.status(204).end()
+    // phones = phones.filter((note) => note.id !== id)
+    
+    // res.status(204).end()
+
+    Phone.findByIdAndDelete(req.params.id).then((response) => {
+      console.log(response)
+    
+    if (response) {
+
+
+
+      res.status(204).end()
+    }else {
+      
+      res.status(203).end()
+    }
+    
+    
+    
+    
+    
+    }).catch(error => next(error))
 })
 app.get('/persons', (req, res) => {
-    res.json(phones)
-})
-app.get('/persons/:id', (req, res) => {
-
-
-
-
-
-    const id = Number(req.params.id)
+  Phone.find({}).then((phonesData) => {
     
-    const phone = phones.filter((phone) => phone.id === id)
 
-    if(phone.length > 0){
-        console.log('ok', phone)
-        res.json(phone)
-    } else {
-        res.status(404).end()
+    console.log(phonesData)
     
-    }
+    phones = phonesData
+    res.json(phonesData.map(phoneData => phoneData.toJSON()))
+  })  
 })
+app.get('/persons/:id', (req, res, next) => {
+
+
+
+
+
+    // const id = Number(req.params.id)
+    
+    // const phone = phones.filter((phone) => phone.id === id)
+
+    // if(phone.length > 0){
+    //     console.log('ok', phone)
+    //     res.json(phone)
+    // } else {
+    //     res.status(404).end()
+    
+    // }
+
+    Phone.findById(req.params.id).then(note => res.json(note.toJSON()))
+    .catch(exception => {next(exception)})
+    
+})
+
 
 app.post('/persons', (req, res, next) => {
+   
     const phone = req.body
 
+    // const newPhone = {
+    //     name: phone.name,
+    //     id: generateId()
+    // }
 
-    const newPhone = {
-        name: phone.name,
-        id: generateId()
+    // const findName = phones.find((phone1) => phone1.name === phone.name)
+    // if (findName) {
+
+    //     //res.status(500).send({error: 'already exists'})
+    //     console.log('beforenext')
+    //     next()
+    // }else {
+    // console.log('id', newPhone.id, typeof(newPhone.id))
+    // phones = phones.concat(newPhone)
+    // res.json(newPhone)}
+
+
+
+
+
+    if (phone.name === undefined) {
+      return res.status(400).json({error: 'content not exist'})
     }
 
-    const findName = phones.find((phone1) => phone1.name === phone.name)
-    if (findName) {
-
-        //res.status(500).send({error: 'already exists'})
-        console.log('beforenext')
-        next()
-    }else {
-    console.log('id', newPhone.id, typeof(newPhone.id))
-    phones = phones.concat(newPhone)
-    res.json(newPhone)}
 
 
 
-}, errorHandler)
+
+
+
+    const phoneData = new Phone({
+      name: phone.name,
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      phone: ''})
+    phoneData.save().then(savedNote => {console.log('here'); res.json(savedNote.toJSON())})
+  .catch(exception =>{next(exception)})})
 
 
 function generateId() {
@@ -151,10 +159,14 @@ const unknownEndpoint = (request, response) => {
 }
 
 app.use(unknownEndpoint)
-function errorHandler (req, res, next) {
-  console.log('here')
-  //console.error(err.stack)
+function errorHandler (error, req, res, next) {
+  console.log('ERRORHANDLER', error)
+  if (error.name === 'ValidationError') {
+
+    res.status(400).json(error)
+  }
   res.status(500).send('Something broke!')
 }
+app.use(errorHandler)
 app.listen('3023')
 console.log('app listen for 3023')
